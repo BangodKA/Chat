@@ -14,23 +14,27 @@
 #include <string.h>
 
 #define QMAX 2
+#define TIMEOUT 5
+
+int action = 0;
+int finish = 0;
+
+typedef void (*sighandler_t)(int);
 
 typedef struct Client{
     char name[50];
+    char *message;
     int socket;
+    int mes_len;
+    int size;
+    int name_len;
+    int check_name;
 }client;
 
-void Copy(const char *small, char *big, int data_volume) {
-    for(int i = 0; i < data_volume; i++) {
-        big[i] = small[i];
-    }
-}
-
 void GiveMoreSpace (char **small, int *data_volume) {
-    int temp = *data_volume;
     *data_volume *= 2;
     char* big = (char *)malloc(*data_volume * sizeof(char));
-    Copy(*small, big, temp);
+    strcpy (big, *small);
     free(*small);
     *small = big;
 }
@@ -66,35 +70,44 @@ int CheckLetters (char *name) {
     return 1;
 }
 
-int CheckOverlap (char * name, client *clients) {
-    for (int i = 0; i < sizeof(clients); i++) {
-        if (!strcmp (name, clients[i].name)) {
+int CheckOverlap (char * name, client *users) {
+    for (int i = 0; i < sizeof(users); i++) {
+        if (!strcmp (name, users[i].name)) {
             return 1;
         }
     }
     return 0;
 }
 
-int CheckNameAvailability (char *name, client *clients) {
+int CheckNameAvailability (char *name, client *users) {
     if (strlen(name) < 5 || strlen(name) > 18) {
         return 0;
     }
     if (!CheckLetters (name)) {
         return 0;
     }
-    if (CheckOverlap (name, clients)) {
+    if (CheckOverlap (name, users)) {
         return -1;
     }
     return 1;
 }
 
+void TimeHandler (int s) {
+    action = 1;
+    alarm(TIMEOUT);
+}
+
+void StopHandler (int s) {
+    finish = 1;
+}
+
 int main(int argc, char **argv) {
     struct timeval timeout;
     int main_socket;
-    client clients[QMAX];
-    memset (clients, 0, QMAX * sizeof(client));
+    client users[QMAX];
+    memset (users, 0, QMAX * sizeof(client));
     char package[8];
-    memset(package, '\0', 80);
+    memset(package, '\0', sizeof(package));
     struct sockaddr_in main_addr, clients_addr[QMAX];
     main_socket = socket(AF_INET, SOCK_STREAM, 0);
     
@@ -108,7 +121,17 @@ int main(int argc, char **argv) {
         return 0;
     }
 
+    printf ("# chat server is running at port %s\n", argv[1]);
+
+    int amount = 0;
+    alarm(TIMEOUT);
+    signal (SIGALRM, TimeHandler);
+    signal (SIGINT, StopHandler);
+
     while (1) {
+        if (finish) {
+            break;
+        }
         fd_set available_sockets;
         FD_ZERO(&available_sockets);
 
@@ -118,7 +141,7 @@ int main(int argc, char **argv) {
         int free_index = -1;
 
         for (int i = 0 ; i < QMAX ; i++) {
-            int sd = clients[i].socket;
+            int sd = users[i].socket;
 
             if (sd > 0) {
                 FD_SET(sd , &available_sockets);
@@ -133,22 +156,22 @@ int main(int argc, char **argv) {
                 max_sd = sd;
         }
 
-        timeout.tv_sec = 5;
+        timeout.tv_sec = 1000;
         timeout.tv_usec = 0;
         int status = select(max_sd + 1, &available_sockets, NULL, NULL, &timeout);
         switch (status) {
             case -1: {
-                perror("Error: ");
-                break;
-            };
-            case 0: {
-                printf("Chat server is running...\n");
+                if (action == 1) {
+                    action = 0;
+                    printf("# chat server is running... (%d users connected)\n", amount);
+                }
                 continue;
             };
-            default: {
-                //ToDo
-            }
-            
+            case 0: {
+                continue;
+            };
+            default:    break;    
+       
         }
 
         if (FD_ISSET(main_socket, &available_sockets)) {
@@ -156,91 +179,120 @@ int main(int argc, char **argv) {
             memset (&clients_addr, 0, cl_addr_len);
             int new_socket = accept(main_socket, (struct sockaddr *) NULL, (socklen_t *) NULL);
             if (free_index == -1) {
-                char buf[60] = "# Unfortunately, server is full...\n# Try again later\n";
+                if (action == 1) {
+                    action = 0;
+                    printf("# chat server is running... (%d users connected)\n", amount);
+                }
+                char buf[60] = "# unfortunately, server is full...\n# try again later\n";
                 send(new_socket, buf, sizeof(buf), 0);
                 shutdown(new_socket, 1);
                 close(new_socket);
             }
             else {
-                clients[free_index].socket = new_socket;
+                alarm(TIMEOUT);
+                users[free_index].socket = new_socket;
                 char buf[50] = "Enter your name, please: ";
-                send(clients[free_index].socket, buf, sizeof(buf), 0);
+                char temp[4]; 
+                sprintf(temp, "%d", free_index + 1);
+                strcpy(users[free_index].name, "user_");
+                strcat(users[free_index].name, temp);
+                printf ("%s joned the chat\n", users[free_index].name);
+                users[free_index].name_len = 0;
+                send(users[free_index].socket, buf, sizeof(buf), 0);
+                amount++;
             }
         }
         for (int i = 0; i < QMAX; i++) {
-            if (FD_ISSET(clients[i].socket, &available_sockets)) {
-                int size = 8;
-                int length = 0;
-                char *message = (char *)malloc(size * sizeof(char));
-                memset(message, '\0', 8);
-                while (1) {
-                    //printf("size = %d\n", size);
-                    if (!strlen(clients[i].name)) {
-                        char test_name[50];
+            if (FD_ISSET(users[i].socket, &available_sockets)) {
+                alarm(TIMEOUT);
+                if (users[i].mes_len == 0) {
+                    users[i].size = 8;
+                    users[i].message = (char *)malloc(users[i].size * sizeof(char));
+                    memset(users[i].message, '\0', 8);
+                }
+                if (!users[i].name_len) {
+                    char test_name[50];
+                    memset (test_name, '\0', sizeof(test_name));
+                    int mes_len = recv(users[i].socket, test_name, sizeof(test_name), 0);
+                    if (mes_len == 0) {
+                        FD_CLR (users[i].socket, &available_sockets);
+                        shutdown(users[i].socket, 1);
+                        close(users[i].socket);
+                        printf("%s left the chat\n", users[i].name);
+                        users[i].socket = 0;
+                        amount--;
+                        continue;
+                    }
+                    if (!strchr(test_name, '\n')) {
+                        users[i].check_name = 1;
                         memset (test_name, '\0', sizeof(test_name));
-                        recv(clients[i].socket, test_name, sizeof(test_name), 0);
-                        int availability_status = 0;
-                        if ((availability_status = CheckNameAvailability (test_name, clients)) != 1) {
-                            char problem[80];
-                            memset (problem, '\0', sizeof(problem));
-                            switch (availability_status) {
-                                case 0: {
-                                    strcpy (problem, "# invalid name\nEnter your name, please: ");
-                                    break;
-                                }
-                                case -1: {
-                                    strcpy (problem, "# such name already exists\nEnter your name, please: ");
-                                    break;
-                                }
-                                default: {
-                                    strcpy (problem, "# invalid name\nEnter your name, please: ");
-                                    break;
-                                }
+                        continue;
+                    }
+                    if (users[i].check_name == 1) {
+                        users[i].check_name = 0;
+                        memset (test_name, '\0', sizeof(test_name));
+                        continue;
+                    }
+                    int availability_status = 0;
+                    if ((availability_status = CheckNameAvailability (test_name, users)) != 1) {
+                        char problem[80];
+                        memset (problem, '\0', sizeof(problem));
+                        switch (availability_status) {
+                            case 0: {
+                                strcpy (problem, "# invalid name\nEnter your name, please: ");
+                                break;
                             }
-                            send(clients[i].socket, problem, sizeof(problem), 0);
+                            case -1: {
+                                strcpy (problem, "# such name already exists\nEnter your name, please: ");
+                                break;
+                            }
+                            default: {
+                                strcpy (problem, "# invalid name\nEnter your name, please: ");
+                                break;
+                            }
                         }
-                        else {
-                            strncpy(clients[i].name, test_name, strlen(test_name) - 2);
-                            printf ("Welcome, %s!\n", clients[i].name);
-                        }
-                        memset (test_name, '\0', sizeof(test_name));
-                        break;
-                    }
-                    memset(package, '\0', sizeof(package));
-                    int mes_len = recv(clients[i].socket, package, sizeof(package), 0);
-                    //printf("tr: %s\n", package);
-                    if ((!strncmp(package, "bye!\r", 5) && length == 0) || mes_len == 0) {
-                        FD_CLR (clients[i].socket, &available_sockets);
-                        shutdown(clients[i].socket, 1);
-                        close(clients[i].socket);
-                        //clients[i].socket = -1;
-                        printf("%s left the chat!\n", clients[i].name);
-                        memset (clients, 0, QMAX * sizeof(client));
-                        break;
-                    }
-                    char *fre;
-                    if (!(fre = strchr(package, '\n'))) {
-                        if ((size - length) < sizeof(package)) {
-                            GiveMoreSpace(&message, &size);
-                        }
-                        //printf("11::");
-                        strcat(message, package);
-                        //printf("tr: %s\n", message);
-                        length += sizeof(package);
+                        send(users[i].socket, problem, sizeof(problem), 0);
                     }
                     else {
-                        //printf("prelast: %s\n", message);
-                        if ((size - length) < (strchr(package, '\n') - package)) {
-                            GiveMoreSpace(&message, &size);
-                        }
-                        //printf("22::");
-                        //printf("1tr: %s\n", message);
-                        strncat(message, package, (strchr(package, '\n') - package));
-                        printf("%d : %s\n", i, message);
-                        break;
-                        //memset(package, '\0', sizeof(package));
+                        printf ("%s changed name to ", users[i].name);
+                        memset(users[i].name, '\0', sizeof(users[i].name));
+                        strncpy(users[i].name, test_name, strlen(test_name) - 2);
+                        printf ("'%s'\n", users[i].name);
+                        users[i].name_len = strlen(test_name);
+                        char temp[100];
+                        memset(temp, '\0', sizeof(temp));
+                        sprintf (temp, "%s%s%s", "Welcome, ", users[i].name, "!\n");
+                        send (users[i].socket, temp, sizeof(temp), 0);
                     }
-                    //printf("last: %s\n", message);
+                    memset (test_name, '\0', sizeof(test_name));
+                    continue;
+                }
+                memset(package, '\0', sizeof(package));
+                int mes_len = recv(users[i].socket, package, sizeof(package), 0);
+                if ((!strncmp(package, "bye!\r", 5) && users[i].mes_len == 0) || mes_len == 0) {
+                    FD_CLR (users[i].socket, &available_sockets);
+                    shutdown(users[i].socket, 1);
+                    close(users[i].socket);
+                    printf("%s left the chat\n", users[i].name);
+                    users[i].socket = 0;
+                    amount--;
+                    continue;
+                }
+                char *fre;
+                if (!(fre = strchr(package, '\n'))) {
+                    if ((users[i].size - users[i].mes_len) < sizeof(package)) {
+                        GiveMoreSpace(&users[i].message, &users[i].size);
+                    }
+                    strcat(users[i].message, package);
+                    users[i].mes_len += sizeof(package);
+                }
+                else {
+                    if ((users[i].size - users[i].mes_len) < (strchr(package, '\n') - package)) {
+                        GiveMoreSpace(&users[i].message, &users[i].size);
+                    }
+                    strncat(users[i].message, package, (strchr(package, '\n') - package));
+                    printf("[%s]: %s\n", users[i].name, users[i].message);
+                    users[i].mes_len = 0;
                 }
             }
         }
