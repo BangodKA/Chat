@@ -1,3 +1,7 @@
+#define RESET   "\033[0m"
+#define DIR   "\033[32;22m"
+#define HOST  "\033[34;22;1m"
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -34,7 +38,7 @@ typedef struct Client{
 
 void GiveMoreSpace (char **small, int *data_volume) {
     *data_volume *= 2;
-    char* big = (char *)malloc(*data_volume * sizeof(char));
+    char* big = (char *)calloc(*data_volume, sizeof(char));
     memset (big, '\0', *data_volume);
     strcpy (big, *small);
     free(*small);
@@ -128,7 +132,8 @@ int main(int argc, char **argv) {
     int amount = 0;
     alarm(TIMEOUT);
     signal (SIGALRM, TimeHandler);
-    signal (SIGINT, StopHandler);
+    signal (SIGINT, StopHandler);   
+
 
     while (1) {
         if (finish) {
@@ -193,7 +198,7 @@ int main(int argc, char **argv) {
             else {
                 alarm(TIMEOUT);
                 users[free_index].socket = new_socket;
-                char buf[50] = "Enter your name, please: ";
+                char buf[100] = "Enter your name, please: \033[32;22m";
                 char temp[4]; 
                 sprintf(temp, "%d", free_index + 1);
                 strcpy(users[free_index].name, "user_");
@@ -208,8 +213,7 @@ int main(int argc, char **argv) {
             if (FD_ISSET(users[i].socket, &available_sockets)) {
                 if (users[i].mes_len == 0) {
                     users[i].size = 8;
-                    users[i].message = (char *)malloc(users[i].size * sizeof(char));
-                    memset(users[i].message, '\0', 8);
+                    users[i].message = (char *)calloc(users[i].size, sizeof(char));
                 }
                 if (!users[i].name_len) {
                     char test_name[50];
@@ -237,19 +241,19 @@ int main(int argc, char **argv) {
                     }
                     int availability_status = 0;
                     if ((availability_status = CheckNameAvailability (test_name, users)) != 1) {
-                        char problem[80];
+                        char problem[150];
                         memset (problem, '\0', sizeof(problem));
                         switch (availability_status) {
                             case 0: {
-                                strcpy (problem, "# invalid name\nEnter your name, please: ");
+                                strcpy (problem, "\033[0m# invalid name\nEnter your name, please: \033[32;22m");
                                 break;
                             }
                             case -1: {
-                                strcpy (problem, "# such name already exists\nEnter your name, please: ");
+                                strcpy (problem, "\033[0m# such name already exists\nEnter your name, please: \033[32;22m");
                                 break;
                             }
                             default: {
-                                strcpy (problem, "# invalid name\nEnter your name, please: ");
+                                strcpy (problem, "\033[0m# invalid name\nEnter your name, please: \033[32;22m");
                                 break;
                             }
                         }
@@ -264,7 +268,7 @@ int main(int argc, char **argv) {
                         users[i].name_len = strlen(test_name);
                         char temp[100];
                         memset(temp, '\0', sizeof(temp));
-                        sprintf (temp, "%s%s%s", "Welcome, ", users[i].name, "!\n");
+                        sprintf (temp, "%s%s%s%s%s", RESET, "Welcome, ", users[i].name, "!\n", DIR);
                         send (users[i].socket, temp, sizeof(temp), 0);
                     }
                     memset (test_name, '\0', sizeof(test_name));
@@ -294,14 +298,20 @@ int main(int argc, char **argv) {
                     if ((users[i].size - users[i].mes_len) < (strchr(package, '\n') - package)) {
                         GiveMoreSpace(&users[i].message, &users[i].size);
                     }
-                    strncat(users[i].message, package, (strchr(package, '\n') - package));
-                    printf("[%s]: %s\n", users[i].name, users[i].message);
-                    /*for (int k = 0; k < QMAX; k++) {
-                        if (users[k].socket > 0 && k != i) {
-                            send (users[k].socket, users[i].message, users[i].mes_len, 0);
+                    users[i].mes_len += strchr(package, '\n') - package + 1;
+                    strncat(users[i].message, package, (strchr(package, '\n') - package + 1));
+                    printf("[%s]: %s", users[i].name, users[i].message);
+                    for (int k = 0; k < QMAX; k++) {
+                        if (users[k].socket > 0 && k != i && users[k].name_len) {
+                            char *package_others = (char *)malloc((users[i].mes_len + 100) * sizeof(char));
+                            memset (package_others, '\0', (users[i].mes_len + 100));
+                            //sprintf (package_others, "%s%30s\n%s  %30s", HOST, users[i].name, DIR, users[i].message);
+                            sprintf (package_others, "%s%30s\n%s  %30s\n", HOST, users[i].name, DIR, users[i].message);
+                            send (users[k].socket, package_others, (users[i].mes_len + 100), 0);
                         }
-                    }*/
+                    }
                     users[i].mes_len = 0;
+                    free (users[i].message);
                 }
             }
         }

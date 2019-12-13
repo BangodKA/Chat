@@ -104,34 +104,53 @@ int main (int argc, char **argv) {
         if (!strcmp(message, "bye!\r\n")) {
             break;
         }
-              /*  size = 8;
-                length = 0;
-                char *companion_message = (char *)malloc(size * sizeof(char));
-                while (1) {
-                    char *fre;
-                    char package[8];
-                    fcntl(sock, F_SETFL, O_NONBLOCK);
-                    int status = recv (sock, package, sizeof(package), 0);
-                    fcntl(sock, F_SETFL, 0);
-                    if (status == -1) {
-                        break;
-                    }
-                    if (!(fre = strchr(package, '\n'))) {
-                        if ((size - length) < sizeof(package)) {
-                            GiveMoreSpace(&companion_message, &size);
-                        }
-                        strcat(companion_message, package);
-                        length += sizeof(package);
-                    }
-                    else {
-                        if ((size - length) < (strchr(package, '\n') - package)) {
-                            GiveMoreSpace(&companion_message, &size);
-                        }
-                        strncat(companion_message, package, (strchr(package, '\n') - package));
-                        printf("[]: %s\n", companion_message);
-                        break;
-                    }
-                }*/
+
+        fd_set available_socket;
+        FD_ZERO(&available_socket);
+        FD_SET(sock, &available_socket);
+        struct timeval timeout;
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
+        int status = select(sock + 1, &available_socket, NULL, NULL, &timeout);
+        switch (status) {
+            case -1: {
+                continue;
+            };
+            case 0: {
+                continue;
+            };
+            default:    break;    
+       
+        }
+
+        /*size = 8;
+        length = 0;
+        char *companion_message = (char *)malloc(size * sizeof(char));
+        while (1) {
+            char *fre;
+            char package[8];
+            fcntl(sock, F_SETFL, O_NONBLOCK);
+            int status = recv (sock, package, sizeof(package), 0);
+            fcntl(sock, F_SETFL, 0);
+            if (status == -1) {
+                break;
+            }
+            if (!(fre = strchr(package, '\n'))) {
+                if ((size - length) < sizeof(package)) {
+                    GiveMoreSpace(&companion_message, &size);
+                }
+                strcat(companion_message, package);
+                length += sizeof(package);
+            }
+            else {
+                if ((size - length) < (strchr(package, '\n') - package)) {
+                    GiveMoreSpace(&companion_message, &size);
+                }
+                strncat(companion_message, package, (strchr(package, '\n') - package + 1));
+                printf("%s", companion_message);
+                break;
+            }
+        }*/
     }
 
     shutdown(sock, 1);
