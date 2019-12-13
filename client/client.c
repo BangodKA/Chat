@@ -56,7 +56,7 @@ int main (int argc, char **argv) {
         memset (buf, '\0', sizeof(buf));
         recv(sock, buf, sizeof(buf), 0);
         printf("%s", buf);
-        if (buf[0] == 'W') {
+        if (strstr(buf, "Welcome")) {
             break;
         }
         char c;
@@ -103,24 +103,6 @@ int main (int argc, char **argv) {
         send (sock, message, length + 2, 0);
         if (!strcmp(message, "bye!\r\n")) {
             break;
-        }
-
-        fd_set available_socket;
-        FD_ZERO(&available_socket);
-        FD_SET(sock, &available_socket);
-        struct timeval timeout;
-        timeout.tv_sec = 1;
-        timeout.tv_usec = 0;
-        int status = select(sock + 1, &available_socket, NULL, NULL, &timeout);
-        switch (status) {
-            case -1: {
-                continue;
-            };
-            case 0: {
-                continue;
-            };
-            default:    break;    
-       
         }
     }
 
