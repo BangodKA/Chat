@@ -122,35 +122,6 @@ int main (int argc, char **argv) {
             default:    break;    
        
         }
-
-        /*size = 8;
-        length = 0;
-        char *companion_message = (char *)malloc(size * sizeof(char));
-        while (1) {
-            char *fre;
-            char package[8];
-            fcntl(sock, F_SETFL, O_NONBLOCK);
-            int status = recv (sock, package, sizeof(package), 0);
-            fcntl(sock, F_SETFL, 0);
-            if (status == -1) {
-                break;
-            }
-            if (!(fre = strchr(package, '\n'))) {
-                if ((size - length) < sizeof(package)) {
-                    GiveMoreSpace(&companion_message, &size);
-                }
-                strcat(companion_message, package);
-                length += sizeof(package);
-            }
-            else {
-                if ((size - length) < (strchr(package, '\n') - package)) {
-                    GiveMoreSpace(&companion_message, &size);
-                }
-                strncat(companion_message, package, (strchr(package, '\n') - package + 1));
-                printf("%s", companion_message);
-                break;
-            }
-        }*/
     }
 
     shutdown(sock, 1);
