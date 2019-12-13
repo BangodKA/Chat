@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
+#include <limits.h>
 
 #define QMAX 2
 #define TIMEOUT 5
@@ -34,6 +35,7 @@ typedef struct Client{
 void GiveMoreSpace (char **small, int *data_volume) {
     *data_volume *= 2;
     char* big = (char *)malloc(*data_volume * sizeof(char));
+    memset (big, '\0', *data_volume);
     strcpy (big, *small);
     free(*small);
     *small = big;
@@ -41,7 +43,7 @@ void GiveMoreSpace (char **small, int *data_volume) {
 
 int PrepareServer(int main_socket, struct sockaddr_in addr) {
     if (main_socket < 0) {
-        perror("Can't create socket!");
+        perror("Can't create socket! ");
         return 0;
     }
 
@@ -114,7 +116,7 @@ int main(int argc, char **argv) {
     memset(&main_addr, 0, sizeof(main_addr));
 
     main_addr.sin_family = AF_INET;
-    main_addr.sin_port = htons(atoi(argv[1]));
+    main_addr.sin_port = htons(5599);
     main_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if (!PrepareServer(main_socket, main_addr)) {
@@ -204,7 +206,6 @@ int main(int argc, char **argv) {
         }
         for (int i = 0; i < QMAX; i++) {
             if (FD_ISSET(users[i].socket, &available_sockets)) {
-                alarm(TIMEOUT);
                 if (users[i].mes_len == 0) {
                     users[i].size = 8;
                     users[i].message = (char *)malloc(users[i].size * sizeof(char));
@@ -215,6 +216,7 @@ int main(int argc, char **argv) {
                     memset (test_name, '\0', sizeof(test_name));
                     int mes_len = recv(users[i].socket, test_name, sizeof(test_name), 0);
                     if (mes_len == 0) {
+                        alarm(TIMEOUT);
                         FD_CLR (users[i].socket, &available_sockets);
                         shutdown(users[i].socket, 1);
                         close(users[i].socket);
@@ -254,6 +256,7 @@ int main(int argc, char **argv) {
                         send(users[i].socket, problem, sizeof(problem), 0);
                     }
                     else {
+                        alarm(TIMEOUT);
                         printf ("%s changed name to ", users[i].name);
                         memset(users[i].name, '\0', sizeof(users[i].name));
                         strncpy(users[i].name, test_name, strlen(test_name) - 2);
@@ -267,6 +270,7 @@ int main(int argc, char **argv) {
                     memset (test_name, '\0', sizeof(test_name));
                     continue;
                 }
+                alarm(TIMEOUT);
                 memset(package, '\0', sizeof(package));
                 int mes_len = recv(users[i].socket, package, sizeof(package), 0);
                 if ((!strncmp(package, "bye!\r", 5) && users[i].mes_len == 0) || mes_len == 0) {
@@ -292,6 +296,11 @@ int main(int argc, char **argv) {
                     }
                     strncat(users[i].message, package, (strchr(package, '\n') - package));
                     printf("[%s]: %s\n", users[i].name, users[i].message);
+                    /*for (int k = 0; k < QMAX; k++) {
+                        if (users[k].socket > 0 && k != i) {
+                            send (users[k].socket, users[i].message, users[i].mes_len, 0);
+                        }
+                    }*/
                     users[i].mes_len = 0;
                 }
             }
