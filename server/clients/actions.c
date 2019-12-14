@@ -62,9 +62,9 @@ int FindActiveSockets (fd_set *available_sockets, int max_sd, int clients_amount
 
 void TooManyUsers (int new_socket, int clients_amount) {
     HandleAlarm(clients_amount);
-    char buf[60] = "# unfortunately, server is full...\n# try again later\n";
+    char buf[] = "# unfortunately, server is full...\n# try again later\n";
     send(new_socket, buf, sizeof(buf), 0);
-    shutdown(new_socket, 1);
+    shutdown(new_socket, 2);
     close(new_socket);
 }
 

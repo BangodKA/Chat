@@ -21,7 +21,7 @@ void StopHandler (int s) {
     finish = 1;
 }
 
-int PrepareServer(int *main_socket, struct sockaddr_in *main_addr, char *s) {
+int PrepareServer(int *main_socket, struct sockaddr_in *main_addr, const char *s) {
     *main_socket = socket(AF_INET, SOCK_STREAM, 0);
     memset(main_addr, 0, sizeof(*main_addr));
     (*main_addr).sin_family = AF_INET;
@@ -56,7 +56,19 @@ void SetUpSigHndl () {
     signal (SIGINT, StopHandler);  
 }
 
-void RunServer (char *s) {
+int NotNumber(const char *s) {
+    for (int i = 0; i < strlen(s); i++) {
+        if (!(s[i] <= '9' && s[i] >= '0')) {
+            return 1;
+        } 
+    }
+    return 0;
+}
+
+void RunServer (const char *s) {
+    if (NotNumber(s)) {
+        return;
+    }
     int main_socket;
     client users[QMAX];
     memset (users, 0, QMAX * sizeof(client));
