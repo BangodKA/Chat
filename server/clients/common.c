@@ -29,7 +29,7 @@ int HandleLeaving (int mes_len, fd_set *available_sockets, int *clients_amount, 
     if (mes_len == 0 || (!strncmp(package, "bye!\r", 5) && (*user).mes_len == 0)) {
         alarm(TIMEOUT);
         FD_CLR ((*user).socket, available_sockets);
-        shutdown((*user).socket, 1);
+        shutdown((*user).socket, 2);
         close((*user).socket);
         printf("%s left the chat\n", (*user).name);
         (*user).socket = 0;

@@ -74,11 +74,7 @@ void ConnectNewUser (client *users, int free_index, int new_socket, int *clients
     char buf[100];
     memset (buf, '\0', sizeof(buf));
     strcpy (buf, "Enter your name, please: \033[32;22m");
-    char temp[4]; 
-    memset (temp, '\0', sizeof(temp));
-    sprintf(temp, "%d", free_index + 1);
-    strcpy(users[free_index].name, "user_");
-    strcat(users[free_index].name, temp);
+    sprintf(users[free_index].name, "user_%d", free_index + 1);
     printf ("%s joned the chat\n", users[free_index].name);
     users[free_index].check_name = 0;
     send(users[free_index].socket, buf, sizeof(buf), 0);

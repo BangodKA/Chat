@@ -100,6 +100,6 @@ void RunServer (const char *s) {
         HandleUsersActions(users, &available_sockets, &clients_amount);
     }
 
-    shutdown(main_socket, 1);
+    shutdown(main_socket, 2);
     close(main_socket);
 }
