@@ -76,7 +76,10 @@ int NotUsableName (char *test_name, client *users, int i) {
                 strcpy (problem, "\033[0m# such name already exists\nEnter your name, please: \033[32;22m");
                 break;
             }
-            default: break;
+            default: {
+                strcpy (problem, "\033[0m# invalid name\nEnter your name, please: \033[32;22m");
+                break;
+            }
         }
         send(users[i].socket, problem, sizeof(problem), 0);
         return 1;
@@ -86,14 +89,13 @@ int NotUsableName (char *test_name, client *users, int i) {
 
 void HandleUsableName (char *test_name, client *users, int i) {
     alarm(TIMEOUT);
-    printf ("%s changed name to ", users[i].name);
+    printf ("%s changed name to %s", users[i].name, test_name);
     memset(users[i].name, '\0', sizeof(users[i].name));
     strncpy(users[i].name, test_name, strlen(test_name) - 2);
-    printf ("'%s'\n", users[i].name);
     users[i].check_name = 1;
     char temp[100];
     memset(temp, '\0', sizeof(temp));
-    sprintf (temp, "%s%s%s%s%s", RESET, "Welcome, ", users[i].name, "!\n", DIR);
+    sprintf (temp, "%sWelcome, %s!\n%s", RESET, users[i].name, DIR);
     send (users[i].socket, temp, sizeof(temp), 0);
 }
 
