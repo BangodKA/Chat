@@ -3,18 +3,9 @@
 #include <sys/select.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 
-#define TIMEOUT 5
-
-typedef struct Client{
-    char name[50];
-    char *message;
-    int socket;
-    int mes_len;
-    int size;
-    int check_name;
-}client;
+#include "common.h"
 
 void GiveMoreSpace (char **small, int *data_volume) {
     *data_volume *= 2;

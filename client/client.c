@@ -37,11 +37,12 @@ int main (int argc, char **argv) {
         perror("Can't create socket! ");
         return 0;
     }
-    addr.sin_family = AF_INET; 
-    addr.sin_port = htons(5599); 
+    addr.sin_family = AF_INET;
+    int port = argc == 2 ? atoi(argv[1]) : 5599;
+    addr.sin_port = htons(port); 
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    if(connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+    if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         perror("Can't connect socket! ");
         return  0;
     }
@@ -57,6 +58,10 @@ int main (int argc, char **argv) {
         recv(sock, buf, sizeof(buf), 0);
         printf("%s", buf);
         if (strstr(buf, "Welcome")) {
+            break;
+        }
+        else if (strstr(buf, "# unf")) {
+            finish = 1;
             break;
         }
         char c;
@@ -78,36 +83,46 @@ int main (int argc, char **argv) {
         name[length + 1] = '\n';
         send (sock, name, length + 2, 0);
     }
-
-    while (1) {
-        if (finish) {
-            break;
-        }
-        char c;
-        int size = 8;
-        int length = 0;
-        char *message = (char *)malloc(size * sizeof(char));
-        memset (message, '\0', size);
-        while ((c = getchar()) != '\n') {
-            message[length] = c;
-            length++;
-            if (length == size) {
-                GiveMoreSpace (&message, &size);
-            }
-        }
-        if (length + 2 == size) {
-            GiveMoreSpace (&message, &size);
-        }
-        message[length] = '\r';
-        message[length + 1] = '\n';
-        send (sock, message, length + 2, 0);
-        if (!strcmp(message, "bye!\r\n")) {
-            break;
+    pid_t child = fork();
+    if (child == 0) {
+        while (1) {
+            char buf[100];
+            memset (buf, '\0', sizeof(buf));
+            recv(sock, buf, sizeof(buf), 0);
+            printf("%s", buf);
         }
     }
-
-    shutdown(sock, 1);
-    close(sock);
+    else {
+        while (1) {
+            if (finish) {
+                break;
+            }
+            char c;
+            int size = 8;
+            int length = 0;
+            char *message = (char *)malloc(size * sizeof(char));
+            memset (message, '\0', size);
+            while ((c = getchar()) != '\n') {
+                message[length] = c;
+                length++;
+                if (length == size) {
+                    GiveMoreSpace (&message, &size);
+                }
+            }
+            if (length + 2 == size) {
+                GiveMoreSpace (&message, &size);
+            }
+            message[length] = '\r';
+            message[length + 1] = '\n';
+            send (sock, message, length + 2, 0);
+            if (!strcmp(message, "bye!\r\n")) {
+                break;
+            }
+        }
+        kill(child, SIGKILL);
+        shutdown(sock, 1);
+        close(sock);
+    }
 
     return 0;
 }

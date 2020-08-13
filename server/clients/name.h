@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common.h"
+
 int NameHasNoEndSymbol (char *test_name, int *check_name);
 
 int CheckLetters (char *name);

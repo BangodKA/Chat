@@ -7,10 +7,9 @@
 #include <stdlib.h> 
 #include <signal.h>
 
+#include "main.h"
 #include "../clients/actions.h"
-
-#define QMAX 2
-#define TIMEOUT 5
+#include "../clients/common.h"
 
 void TimeHandler (int s) {
     action = 1;

@@ -2,6 +2,12 @@
 
 #include <sys/select.h>
 
+#define QMAX 3
+#define TIMEOUT 5
+
+#define MESBUFSIZE 8
+#define NAMEBUFSIZE 50
+
 typedef struct Client{
     char name[50];
     char *message;

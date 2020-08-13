@@ -5,9 +5,7 @@
 #include <unistd.h>
 #include <stdlib.h> 
 
-#define QMAX 2
-#define TIMEOUT 5
-
+#include "actions.h"
 #include "common.h"
 #include "name.h"
 #include "message.h"
@@ -64,7 +62,7 @@ void TooManyUsers (int new_socket, int clients_amount) {
     HandleAlarm(clients_amount);
     char buf[] = "# unfortunately, server is full...\n# try again later\n";
     send(new_socket, buf, sizeof(buf), 0);
-    shutdown(new_socket, 2);
+    shutdown(new_socket, 1);
     close(new_socket);
 }
 

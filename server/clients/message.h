@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common.h"
+
 int IsLastPackage (int end_index_n, int end_index_r, client * user, char *package);
 
 void GatherWholeMessage (int end_index_r, int end_index_n, client *users, int i, char *package);

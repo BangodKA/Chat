@@ -8,11 +8,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#define QMAX 2
-#define TIMEOUT 5
-#define NAMEBUFSIZE 50
-
 #include "common.h"
+#include "name.h"
 
 int NameHasNoEndSymbol (char *test_name, int *check_name) {
     if (!strchr(test_name, '\n')) {
