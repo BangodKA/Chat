@@ -40,7 +40,7 @@ void GatherWholeMessage(int end_index_r, int end_index_n, client *users, int i, 
     printf("[%s]: %s", users[i].name, users[i].message);
 }
 
-void SendOtherUsers(client *users, int i)
+void SendChosenUsers(client *users, int i, char *message)
 {
     for (int k = 0; k < QMAX; k++)
     {
@@ -48,7 +48,12 @@ void SendOtherUsers(client *users, int i)
         {
             char *package_others = (char *)malloc((users[i].mes_len + 100) * sizeof(char));
             memset(package_others, '\0', (users[i].mes_len + 100));
-            sprintf(package_others, "%s%30s\n%s %30s\n", HOST, users[i].name, DIR, users[i].message);
+            if (strcmp(message, "")) {
+                sprintf(package_others, "Connection closed by foreign host.\n");
+            }
+            else {
+                sprintf(package_others, "%s%30s\n%s %30s\n", HOST, users[i].name, DIR, users[i].message);
+            }
             send(users[k].socket, package_others, (users[i].mes_len + 100), 0);
         }
     }
@@ -83,7 +88,7 @@ int GetSendMessage(char *package, client *users, int i)
         }
         GatherWholeMessage(end_index_r, end_index_n, users, i, package);
 
-        SendOtherUsers(users, i);
+        SendChosenUsers(users, i, "");
 
         users[i].mes_len = 0;
         free(users[i].message);

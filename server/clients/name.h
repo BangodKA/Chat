@@ -2,6 +2,8 @@
 
 #include "common.h"
 
+#define NAME_PROMPT "Enter your name, please: \033[32;22m\n"
+
 int NameHasNoEndSymbol (char *test_name, int *check_name);
 
 int CheckLetters (char *name);

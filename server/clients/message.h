@@ -6,7 +6,7 @@ int IsLastPackage (int end_index_n, int end_index_r, client * user, char *packag
 
 void GatherWholeMessage (int end_index_r, int end_index_n, client *users, int i, char *package);
 
-void SendOtherUsers (client *users, int i);
+void SendChosenUsers (client *users, int i, char *message);
 
 int FindSymbol (char *package, int size, char symbol);
 

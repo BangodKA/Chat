@@ -1,7 +1,3 @@
-#define RESET   "\033[0m"
-#define DIR   "\033[32;22m"
-#define HOST  "\033[34;22;1m"
-
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/select.h>
@@ -44,40 +40,37 @@ int CheckOverlap (char * name, client *users) {
 int CheckNameAvailability (char *name, client *users, int *check_name) {
     if (*check_name == -1) {
         *check_name = 0;
-        return 0;
+        return 1;
     }
     if (strlen(name) < 5 || strlen(name) > 18) {
-        return 0;
+        return 1;
     }
     if (!CheckLetters (name)) {
-        return 0;
+        return 1;
     }
     if (CheckOverlap (name, users)) {
         return -1;
     }
     
-    return 1;
+    return 0;
 }
 
 int NotUsableName (char *test_name, client *users, int i) {
     int availability_status = 0;
-    if ((availability_status = CheckNameAvailability (test_name, users, &users[i].check_name)) != 1) {
+    if ((availability_status = CheckNameAvailability (test_name, users, &users[i].check_name)) != 0) {
         char problem[150];
         memset (problem, '\0', sizeof(problem));
         switch (availability_status) {
-            case 0: {
-                strcpy (problem, "\033[0m# invalid name\nEnter your name, please: \033[32;22m");
+            case 1: {
+                strcpy (problem, "\033[0m# invalid name\n");
                 break;
             }
             case -1: {
-                strcpy (problem, "\033[0m# such name already exists\nEnter your name, please: \033[32;22m");
-                break;
-            }
-            default: {
-                strcpy (problem, "\033[0m# invalid name\nEnter your name, please: \033[32;22m");
+                strcpy (problem, "\033[0m# such name already exists\n");
                 break;
             }
         }
+        strcat(problem, NAME_PROMPT);
         send(users[i].socket, problem, sizeof(problem), 0);
         return 1;
     }
@@ -92,7 +85,7 @@ void HandleUsableName (char *test_name, client *users, int i) {
     users[i].check_name = 1;
     char temp[100];
     memset(temp, '\0', sizeof(temp));
-    sprintf (temp, "%sWelcome, %s!\n%s", RESET, users[i].name, DIR);
+    sprintf (temp, "%sWelcome, %s!%s\n", RESET, users[i].name, DIR);
     send (users[i].socket, temp, sizeof(temp), 0);
 }
 

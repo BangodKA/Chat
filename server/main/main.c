@@ -9,6 +9,7 @@
 
 #include "main.h"
 #include "../clients/actions.h"
+#include "../clients/message.h"
 #include "../clients/common.h"
 
 void TimeHandler (int s) {
@@ -99,6 +100,11 @@ void RunServer (const char *s) {
         HandleUsersActions(users, &available_sockets, &clients_amount);
     }
 
+    char * message = (char *)malloc((100) * sizeof(char));
+    memset(message, '\0', (100));
+    sprintf(message, "Connection closed by foreign host.\n");
+    SendChosenUsers(users, -1, message);
+    
     shutdown(main_socket, 2);
     close(main_socket);
 }
